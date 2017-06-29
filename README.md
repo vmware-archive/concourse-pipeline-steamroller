@@ -69,7 +69,7 @@ somewhere, and provide a config that maps resource names to absolute paths on
 disk, such as:
 
 ```yaml
-resource_map
+resource_map:
   "some-resource": /path/to/resource/on/disk
   "another-resource": /some/other/place/on/disk
 ```
