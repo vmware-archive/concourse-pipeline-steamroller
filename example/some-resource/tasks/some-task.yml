@@ -1,0 +1,13 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: some-repository
+
+inputs:
+- name: some-resource
+
+run:
+  path: some-resource/tasks/some-task.sh

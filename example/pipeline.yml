@@ -1,0 +1,6 @@
+jobs:
+- name: my-job
+  plan:
+  - get: some-resource
+  - task: some-task
+    file: some-resource/tasks/some-task.yml
