@@ -12,6 +12,23 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+// interpreter represents the information required to invoke an interpreter.
+type interpreter struct {
+	// The path to the interpreter.
+	Path string
+	// The args used when invoking the interpreter with a script as an arg.
+	Args []string
+}
+
+// interpreters maps file extensions to interpreters.
+var interpreters = map[string]interpreter{
+	"":    {"sh", []string{"-c"}},
+	".sh": {"sh", []string{"-c"}},
+	".rb": {"ruby", []string{"-e"}},
+	".py": {"python", []string{"-c"}},
+	".js": {"node", []string{"-e"}},
+}
+
 type Config struct {
 	ResourceMap map[string]string `yaml:"resource_map"`
 }
@@ -58,13 +75,16 @@ func flattenPlanConfig(files map[string]string, jobPlan []atc.PlanConfig) {
 				step.TaskConfig = &taskConfig
 				step.TaskConfigPath = ""
 
-				scriptBytes, err := loadBytes(files, step.TaskConfig.Run.Path)
+				path := step.TaskConfig.Run.Path
+				scriptBytes, err := loadBytes(files, path)
 				if err != nil {
-					log.Fatalf("failed to read task config at %s: %s", step.TaskConfig.Run.Path, err)
+					log.Fatalf("failed to read task config at %s: %s", path, err)
 				}
 
-				step.TaskConfig.Run.Args = []string{"-c", string(scriptBytes)}
-				step.TaskConfig.Run.Path = "sh"
+				interpreter := interpreters[filepath.Ext(path)]
+				args := append([]string{}, interpreter.Args...)
+				step.TaskConfig.Run.Args = append(args, string(scriptBytes))
+				step.TaskConfig.Run.Path = interpreter.Path
 			}
 
 			jobPlan[i] = step
