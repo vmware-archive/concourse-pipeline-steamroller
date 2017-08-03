@@ -49,7 +49,7 @@ func flattenPlanConfig(files map[string]string, jobPlan []atc.PlanConfig) {
 					log.Fatalf("failed to read task config at %s: %s", step.TaskConfigPath, err)
 				}
 
-				var taskConfig atc.LoadTaskConfig
+				var taskConfig atc.TaskConfig
 				err = yaml.Unmarshal(taskConfigBytes, &taskConfig)
 				if err != nil {
 					log.Fatalf("failed to unmarshal task config at %s: %s", step.TaskConfigPath, err)
