@@ -1,12 +1,14 @@
 package steamroller
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"github.com/concourse/atc"
 	yaml "gopkg.in/yaml.v2"
@@ -18,15 +20,17 @@ type interpreter struct {
 	Path string
 	// The args used when invoking the interpreter with a script as an arg.
 	Args []string
+	// The template to use when inlining the script contents
+	Template string
 }
 
 // interpreters maps file extensions to interpreters.
 var interpreters = map[string]interpreter{
-	"":    {"sh", []string{"-c"}},
-	".sh": {"sh", []string{"-c"}},
-	".rb": {"ruby", []string{"-e"}},
-	".py": {"python", []string{"-c"}},
-	".js": {"node", []string{"-e"}},
+	"":    {"sh", []string{"-c"}, shTemplate},
+	".sh": {"sh", []string{"-c"}, shTemplate},
+	".rb": {"ruby", []string{"-e"}, ""},
+	".py": {"python", []string{"-c"}, ""},
+	".js": {"node", []string{"-e"}, ""},
 }
 
 type Config struct {
@@ -82,9 +86,25 @@ func flattenPlanConfig(files map[string]string, jobPlan []atc.PlanConfig) {
 				}
 
 				interpreter := interpreters[filepath.Ext(path)]
-				args := append([]string{}, interpreter.Args...)
-				step.TaskConfig.Run.Args = append(args, string(scriptBytes))
+
 				step.TaskConfig.Run.Path = interpreter.Path
+
+				if interpreter.Template != "" {
+					script := Script{
+						Contents: string(scriptBytes),
+					}
+
+					buf := &bytes.Buffer{}
+					tmpl := template.Must(template.New("run").Parse(interpreter.Template))
+					err = tmpl.Execute(buf, script)
+					if err != nil {
+						log.Fatalf("failed to execute template: %s", err)
+					}
+
+					step.TaskConfig.Run.Args = append(interpreter.Args, buf.String())
+				} else {
+					step.TaskConfig.Run.Args = append(interpreter.Args, string(scriptBytes))
+				}
 			}
 
 			jobPlan[i] = step
@@ -104,3 +124,15 @@ func loadBytes(resourceMap map[string]string, path string) ([]byte, error) {
 
 	return ioutil.ReadFile(actualPath)
 }
+
+type Script struct {
+	Contents string
+}
+
+const shTemplate = `cat > task.sh <<'EOF'
+{{.Contents}}
+EOF
+
+chmod +x task.sh
+./task.sh
+`
