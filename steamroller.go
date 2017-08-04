@@ -129,9 +129,9 @@ type Script struct {
 	Contents string
 }
 
-const shTemplate = `cat > task.sh <<'EOF'
+const shTemplate = `cat > task.sh <<'EO_SH'
 {{.Contents}}
-EOF
+EO_SH
 
 chmod +x task.sh
 ./task.sh
